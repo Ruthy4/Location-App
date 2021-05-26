@@ -4,6 +4,7 @@ package com.decagon.android.sq007
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -52,22 +53,25 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         getLocationAccess()
-
         getLocationUpdates()
         startLocationUpdates()
+
     }
 
 
+    //an object of the ValueEventListener class to listen for changes at a location
     private val logListener = object : ValueEventListener {
 
         override fun onCancelled(error: DatabaseError) {
             Toast.makeText(applicationContext, "Could not read from database", Toast.LENGTH_LONG).show()
         }
 
+        //listen for data changes in the database and update the marker
         override fun onDataChange(dataSnapshot: DataSnapshot) {
 
             if (dataSnapshot.exists()) {
 
+                //if the snapshot exists in the database, get it and store it in a variable
                 val locationLogging = dataSnapshot.child("femilocation").getValue(LocationModel::class.java)
 
                 val partnerLat =locationLogging?.latitude
@@ -76,6 +80,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (partnerLat !=null  && partnerLong != null) {
                     val partnerLoc = LatLng(partnerLat, partnerLong)
 
+                    //assign the partners location to a marker
                     marker1 = map.addMarker(MarkerOptions().position(partnerLoc).title("Femi"))
                     marker1?.position = partnerLoc
 
@@ -93,6 +98,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
             map.isMyLocationEnabled = true
+//            getLocationUpdates()
+//            startLocationUpdates()
 
         } else
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST)
@@ -101,8 +108,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     //set the interval for receiving location updates and connect to a database
     private fun getLocationUpdates() {
         locationRequest = LocationRequest.create()
-        locationRequest.interval = 10000
-        locationRequest.fastestInterval = 20000
+        locationRequest.interval = 20000
+        locationRequest.fastestInterval = 10000
         locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
 
         locationCallback = object : LocationCallback() {
@@ -110,30 +117,29 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (locationResult.locations.isNotEmpty()) {
                     val location = locationResult.lastLocation
 
-
                     //get a reference to the database
                     databaseRef= Firebase.database.reference
 
 
                     val locationLogging = LocationModel(location.latitude, location.longitude)
 
-
-                    databaseRef.child("userlocation").setValue(locationLogging).addOnSuccessListener {
+                    //store location on firebase using the path ruthlocation
+                    databaseRef.child("ruthlocation").setValue(locationLogging).addOnSuccessListener {
                         Toast.makeText(applicationContext, "Locations written into the database", Toast.LENGTH_LONG).show()
                         }.addOnFailureListener {
                             Toast.makeText(
                                 applicationContext,
-                                "Error occured while writing the locations", Toast.LENGTH_LONG).show()
+                                "Error occurred while writing the locations", Toast.LENGTH_LONG).show()
                         }
-
 
 
                     map.clear()
                     //get the user location, add a marker then zoom the map to building level
                     val latLng = LatLng(location.latitude, location.longitude)
-                    Log.d("Map", "onLocationResult: ${latLng.latitude} ${latLng.longitude}}")
+
                     marker1 = map.addMarker(MarkerOptions().position(latLng).title("Ruth"))
-                   marker1?.position = latLng
+
+                    marker1?.position = latLng
 
                     map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20f))
                 }
@@ -154,11 +160,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         //register callback with client
-        fusedLocationClient.requestLocationUpdates(
-            locationRequest,
-            locationCallback,
-            null
-        )
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
     }
 
     // [START maps_check_location_permission_result]
@@ -169,7 +171,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     ) {
         if (requestCode == LOCATION_PERMISSION_REQUEST) {
             if (grantResults.contains(PackageManager.PERMISSION_GRANTED)) {
-//                getLocationAccess()
+
             } else {
                 Toast.makeText(
                     this,

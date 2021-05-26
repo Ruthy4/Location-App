@@ -11,8 +11,10 @@ class SplashScreenActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash_screen)
 
+        supportActionBar?.hide()
 
 
+        //delay movement to the next activity by 2 seconds
         Handler().postDelayed({
             val intent = Intent(this, MapsActivity::class.java)
             startActivity(intent)
